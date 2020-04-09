@@ -15,15 +15,16 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      // debug: true,q
+      debug: true,
       gravity: { y: 500 },
     },
   }
 };
 
 const game = new Phaser.Game(config);
+const tileSize = 64
 var inventory = {};
-var scoreText;
+var inventoryText;
 
 function preload() {
   // Image layers from Tiled can't be exported to Phaser 3 (as yet)
@@ -42,7 +43,6 @@ function preload() {
   // Load player animations from the player spritesheet and atlas JSON
   this.load.atlas('player', 'assets/images/kenney_player.png',
     'assets/images/kenney_player_atlas.json');
-  this.mushrooms = [];
 }
 
 function create() {
@@ -56,7 +56,7 @@ function create() {
   // Scale the image to better match our game's resolution
   backgroundImage.setScale(2, 0.8);
   // Score info
-  scoreText = this.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
+  inventoryText = this.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
 
 
   // Add the platform layer as a static group, the player would be able
@@ -108,28 +108,34 @@ function create() {
 
   // Create the mushrooms
   this.mushrooms = this.physics.add.group();
+
   for (i = 0; i < 3; i++) {
     // Add new spikes to our sprite group
-    mushroom = this.mushrooms.create(640-(i*64*i), 426, 'green_mushroom');
+    let mushroom = this.mushrooms.create(
+        (tileSize * 10) - (i * tileSize * i),
+        (tileSize * 6.75),
+        'green_mushroom'
+      ).setName("green mushroom");
     mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
-    mushroom.setName("green mushroom");
   };
   for (i = 0; i < 0; i++) {
     // Add new spikes to our sprite group
-    mushroom = this.mushrooms.create(640-(i*64*i)+64, 426, 'red_mushroom');
+    let mushroom = this.mushrooms.create(
+        (tileSize * 10) - (i * tileSize * i)+tileSize,
+        (tileSize * 6.75),
+        'red_mushroom'
+      ).setName("red mushroom");
     mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
-    mushroom.setName("red mushroom");
   };
   this.physics.add.collider(platforms, this.mushrooms);  
   this.physics.add.overlap(this.player, this.mushrooms, collectItem, null, this);
 
 
-  this.wasteland = this.add.sprite(576, 686, 'wasteland_left');
-  // land.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
+  this.wasteland = this.add.sprite((tileSize * 9), (tileSize * 10.75), 'wasteland_left');
+  // this.wasteland.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
 
   this.teleporters = this.physics.add.group()
-  teleporter = this.teleporters.create(220, 326, 'red_mushroom');
-  teleporter.setName("red teleporter");
+  teleporter = this.teleporters.create(220, 326, 'red_mushroom').setName("red teleporter");
   this.physics.add.collider(platforms, this.teleporters);  
   this.physics.add.overlap(this.player, this.teleporters, collectItem, null, this);
 
@@ -160,6 +166,25 @@ function update() {
     }
   }
 
+  // if (this.cursors.right.isDown)
+  //   {
+  //       this.cameras.main.scrollX -= 0.5;
+
+  //       if (this.cameras.main.scrollX <= 0)
+  //       {
+  //           d = 0;
+  //       }
+  //   }
+  //   else
+  //   {
+  //       this.cameras.main.scrollX += 0.5;
+
+  //       if (this.cameras.main.scrollX >= 800)
+  //       {
+  //           d = 1;
+  //       }
+  //   }
+
   // Player can jump while walking any direction by pressing the space bar
   // or the 'UP' arrow
   if ((this.cursors.space.isDown || this.cursors.up.isDown) && this.player.body.onFloor()) {
@@ -177,26 +202,24 @@ function update() {
 }
 
 /**
- * playerHit resets the player's state when it dies from colliding with a spike
+ * collectItem does what it says on the tin. item is added to the inventory
  * @param {*} player - player sprite
- * @param {*} spike - spike player collided with
+ * @param {*} item - item player collided with
  */
 
 function collectItem(player, item) {
   player.setVelocity(0, 0);
-  player.play('idle', true);
   item.disableBody(true, true);
   if (!inventory[item.name]) {
     inventory[item.name] = 1;
   } else {
     inventory[item.name] += 1;
   }
-  console.log(inventory)
   inventoryList = ""
   Object.entries(inventory).forEach(([key, value]) => {
     inventoryList += key + ": " + value + "\n";
   });
-  scoreText.setText('Inventory:\n' + inventoryList);
+  inventoryText.setText('Inventory:\n' + inventoryList);
 }
 
 function generateMushrooms(mushrooms) {
