@@ -1,27 +1,3 @@
-const tileSize = 64;
-window.addEventListener('load', () => {
-  const config = {
-    type: Phaser.AUTO,
-    parent: 'game',
-    width: tileSize * 79,
-    height: tileSize * 16,
-    scale: {
-      mode: Phaser.Scale.RESIZE,
-      autoCenter: Phaser.Scale.CENTER_BOTH
-    },
-    scene: [Level1],
-    physics: {
-      default: 'arcade',
-      arcade: {
-        debug: true,
-        gravity: { y: 500 },
-      },
-    }
-  }
-
-  game = new Phaser.Game(config);
-});
-
 class Level1 extends Phaser.Scene {
   // config = {
   //   type: Phaser.AUTO,
@@ -46,11 +22,12 @@ class Level1 extends Phaser.Scene {
   //   }
   // };
 
+  inventory = {};
+  inventoryText;
 
   init(props) {
     const { level = 0 } = props
     this.currentLevel = level
-    this.inventory = {};
   }
 
   preload() {
@@ -72,8 +49,7 @@ class Level1 extends Phaser.Scene {
       'assets/images/kenney_player_atlas.json');
   }
 
-  addPlayer(platforms) {
-    let scene = this;
+  addPlayer(scene, platforms) {
     // Add the player to the game world
     scene.player = scene.physics.add.sprite(tileSize*2, tileSize*10, 'player');
     scene.player.body.setSize(scene.player.width - 30, scene.player.height - 26).setOffset(14, 26);
@@ -110,9 +86,7 @@ class Level1 extends Phaser.Scene {
   }
 
   create() {
-    let scene = this;
-    const config = game.config
-
+    scene = this;
     console.log(this.currentLevel)
     // Create a tile map, which is used to bring our level in Tiled
     // to our game world in Phaser
@@ -129,8 +103,9 @@ class Level1 extends Phaser.Scene {
     let softEdgeX = tileSize * 3;
     let softEdgeY = tileSize * 2;
     // Score info
-    this.inventoryText = scene.add.text(scene.cameras.main.x+16, scene.cameras.main.y+16, '', { fontSize: '12px', fill: '#000' })
-    this.inventoryText.fixedToCamera = true;
+    inventoryText = scene.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
+    inventoryText.fixedToCamera = true;
+
     // Add the platform layer as a static group, the player would be able
     // to jump on platforms like world collisions but they shouldn't move
     const scenery = map.createStaticLayer('Scenery', tileset, 0, 0);
@@ -144,7 +119,7 @@ class Level1 extends Phaser.Scene {
     platforms.setCollisionByExclusion(-1, true);
 
     // Add the player to the game world
-    this.addPlayer(platforms);
+    addPlayer(scene, platforms);
 
     // Enable user input via cursor keys
     scene.cursors = scene.input.keyboard.createCursorKeys();
@@ -152,7 +127,7 @@ class Level1 extends Phaser.Scene {
     // Create the mushrooms
     scene.mushrooms = scene.physics.add.group();
 
-    for (let i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
       // Add new spikes to our sprite group
       let mushroom = scene.mushrooms.create(
           (tileSize * 10) - (i * tileSize * i),
@@ -161,7 +136,7 @@ class Level1 extends Phaser.Scene {
         ).setName("green mushroom");
       mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
     };
-    for (let i = 0; i < 0; i++) {
+    for (i = 0; i < 0; i++) {
       // Add new spikes to our sprite group
       let mushroom = scene.mushrooms.create(
           (tileSize * 10) - (i * tileSize * i)+tileSize,
@@ -171,31 +146,19 @@ class Level1 extends Phaser.Scene {
       mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
     };
     scene.physics.add.collider(platforms, scene.mushrooms);  
-    scene.physics.add.overlap(scene.player, scene.mushrooms, this.collectItem, null, scene);
+    scene.physics.add.overlap(scene.player, scene.mushrooms, collectItem, null, scene);
 
 
     // scene.wasteland = scene.add.sprite((tileSize * 9), (tileSize * 10.75), 'wasteland_left');
     // scene.wasteland.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
 
     scene.teleporters = scene.physics.add.group()
-    const teleporter = scene.teleporters.create(tileSize*3.5, tileSize*12.5, 'red_mushroom').setName("red teleporter");
+    teleporter = scene.teleporters.create(tileSize*3.5, tileSize*12.5, 'red_mushroom').setName("red teleporter");
     scene.physics.add.collider(platforms, scene.teleporters);  
-    scene.physics.add.overlap(scene.player, scene.teleporters, this.collectItem, null, scene);
+    scene.physics.add.overlap(scene.player, scene.teleporters, collectItem, null, scene);
     var rect = new Phaser.Geom.Rectangle(scene.cameras.main.x, scene.cameras.main.y, config.width - softEdgeX, config.height - softEdgeY)
     var graphics = scene.add.graphics();
     graphics.fillRectShape(rect);
-  }
-
-  againstSoftEdge(side) {
-    console.log("soft?", this.player.x <= this.cameras.main.x + tileSize*3)
-    const softBorder = tileSize*3;
-    if (side == "left") {
-      let leftEdge = this.cameras.main.x;
-      return this.player.x <= leftEdge + softBorder;
-    } else if  (side == "right") {
-      let rightEdge = this.cameras.main.x + this.cameras.main.width;
-      return this.player.x >= rightEdge - softBorder;
-    }
   }
 
   update() {
@@ -210,41 +173,28 @@ class Level1 extends Phaser.Scene {
     //   this.cameras.main.scrollY += 15;
     // }
 
-    if (this.cursors.left.isDown && this.againstSoftEdge("left")) {
-      console.log("Pan left");
-      if (this.cameras.main.scrollX >= 0) {
-        this.cameras.main.scrollX -= 15;
+
+    // Control the player with left or right keys
+    if (this.cursors.left.isDown) {
+      this.player.setVelocityX(-200);
+      console.log('scene.cameras.main.x', scene.cameras.main.x)
+
+      if (this.player.body.onFloor()) {
+        this.player.play('walk', true);
       }
-    } else if (this.cursors.right.isDown && this.againstSoftEdge("right")) {
-      console.log("Pan right");
-      if (this.cameras.main.scrollX <= game.config.width) {
-        this.cameras.main.scrollX += 15;
+    } else if (this.cursors.right.isDown) {
+      this.player.setVelocityX(200);
+
+      if (this.player.body.onFloor()) {
+        this.player.play('walk', true);
       }
     } else {
-      // MOVE //
-      // Control the player with left or right keys
-      if (this.cursors.left.isDown) {
-
-        console.log(tileSize*3, 'scene.cameras.main.x', this.cameras.main.x, this.player.x, this.cameras.main.x <= tileSize*3)
-        this.player.setVelocityX(-200);
-
-        if (this.player.body.onFloor()) {
-          this.player.play('walk', true);
-        }
-      } else if (this.cursors.right.isDown) {
-        this.player.setVelocityX(200);
-
-        if (this.player.body.onFloor()) {
-          this.player.play('walk', true);
-        }
-      } else {
-        // If no keys are pressed, the player keeps still
-        this.player.setVelocityX(0);
-        // Only show the idle animation if the player is footed
-        // If this is not included, the player would look idle while jumping
-        if (this.player.body.onFloor()) {
-          this.player.play('idle', true);
-        }
+      // If no keys are pressed, the player keeps still
+      this.player.setVelocityX(0);
+      // Only show the idle animation if the player is footed
+      // If this is not included, the player would look idle while jumping
+      if (this.player.body.onFloor()) {
+        this.player.play('idle', true);
       }
     }
 
@@ -271,7 +221,6 @@ class Level1 extends Phaser.Scene {
    */
 
   collectItem(player, item) {
-    let inventory = this.inventory;
     player.setVelocity(0, 0);
     item.disableBody(true, true);
     if (!inventory[item.name]) {
@@ -279,12 +228,11 @@ class Level1 extends Phaser.Scene {
     } else {
       inventory[item.name] += 1;
     }
-    let inventoryList = "";
+    inventoryList = ""
     Object.entries(inventory).forEach(([key, value]) => {
       inventoryList += key + ": " + value + "\n";
     });
-    console.log('this',this)
-    this.inventoryText.setText('Inventory:\n' + inventoryList);
+    inventoryText.setText('Inventory:\n' + inventoryList);
   }
 
   generateMushrooms(mushrooms) {
