@@ -3,7 +3,7 @@ window.addEventListener('load', () => {
   const config = {
     type: Phaser.AUTO,
     parent: 'game',
-    width: tileSize * 79,
+    width: tileSize * 100,
     height: tileSize * 16,
     scale: {
       mode: Phaser.Scale.RESIZE,
@@ -75,7 +75,7 @@ class Level1 extends Phaser.Scene {
   addPlayer(platforms) {
     let scene = this;
     // Add the player to the game world
-    scene.player = scene.physics.add.sprite(tileSize*2, tileSize*10, 'player');
+    scene.player = scene.physics.add.sprite(tileSize*12, tileSize*10, 'player');
     scene.player.body.setSize(scene.player.width - 30, scene.player.height - 26).setOffset(14, 26);
     scene.player.setBounce(0.1); // our player will bounce from items
     scene.player.setCollideWorldBounds(true); // don't go out of the map
@@ -113,7 +113,6 @@ class Level1 extends Phaser.Scene {
     let scene = this;
     const config = game.config
 
-    console.log(this.currentLevel)
     // Create a tile map, which is used to bring our level in Tiled
     // to our game world in Phaser
     const map = scene.make.tilemap({ key: 'map' });
@@ -187,14 +186,19 @@ class Level1 extends Phaser.Scene {
   }
 
   againstSoftEdge(side) {
-    console.log("soft?", this.player.x <= this.cameras.main.x + tileSize*3)
-    const softBorder = tileSize*3;
+    const softBorder = tileSize*10;
     if (side == "left") {
-      let leftEdge = this.cameras.main.x;
+      let leftEdge = this.cameras.main.scrollX;
       return this.player.x <= leftEdge + softBorder;
-    } else if  (side == "right") {
-      let rightEdge = this.cameras.main.x + this.cameras.main.width;
-      return this.player.x >= rightEdge - softBorder;
+    } else if (side == "right") {
+      let rightEdge = this.cameras.main.scrollX + this.cameras.main.width;
+      return this.player.x + this.player.width >= rightEdge - softBorder;
+    } else if (side == "top") {
+      let topEdge = this.cameras.main.scrollY;
+      return this.player.y <= topEdge - softBorder;
+    } else if (side == "bottom") {
+      let bottomEdge = this.cameras.main.scrollY + this.cameras.main.height;
+      return this.player.y + this.player.height >= bottomEdge - softBorder;
     }
   }
 
@@ -210,47 +214,45 @@ class Level1 extends Phaser.Scene {
     //   this.cameras.main.scrollY += 15;
     // }
 
-    if (this.cursors.left.isDown && this.againstSoftEdge("left")) {
-      console.log("Pan left");
-      if (this.cameras.main.scrollX >= 0) {
-        this.cameras.main.scrollX -= 15;
+    // MOVE //
+    // Control the player with left or right keys
+    if (this.cursors.left.isDown) {
+      this.player.setVelocityX(-200);
+      if (this.player.body.onFloor()) {
+        this.player.play('walk', true);
       }
-    } else if (this.cursors.right.isDown && this.againstSoftEdge("right")) {
-      console.log("Pan right");
-      if (this.cameras.main.scrollX <= game.config.width) {
-        this.cameras.main.scrollX += 15;
+
+      if (this.againstSoftEdge("left") && this.cameras.main.scrollX >= 0) {
+          this.cameras.main.scrollX -= 5;
+      }
+    } else if (this.cursors.right.isDown) {
+      this.player.setVelocityX(200);
+      if (this.player.body.onFloor()) {
+        this.player.play('walk', true);
+      }
+
+      if (this.againstSoftEdge("right") &&
+            (this.cameras.main.scrollX + this.cameras.main.width <= game.config.width)) {
+          this.cameras.main.scrollX += 5;
       }
     } else {
-      // MOVE //
-      // Control the player with left or right keys
-      if (this.cursors.left.isDown) {
-
-        console.log(tileSize*3, 'scene.cameras.main.x', this.cameras.main.x, this.player.x, this.cameras.main.x <= tileSize*3)
-        this.player.setVelocityX(-200);
-
-        if (this.player.body.onFloor()) {
-          this.player.play('walk', true);
-        }
-      } else if (this.cursors.right.isDown) {
-        this.player.setVelocityX(200);
-
-        if (this.player.body.onFloor()) {
-          this.player.play('walk', true);
-        }
-      } else {
-        // If no keys are pressed, the player keeps still
-        this.player.setVelocityX(0);
-        // Only show the idle animation if the player is footed
-        // If this is not included, the player would look idle while jumping
-        if (this.player.body.onFloor()) {
-          this.player.play('idle', true);
-        }
+      // If no keys are pressed, the player keeps still
+      this.player.setVelocityX(0);
+      // Only show the idle animation if the player is footed
+      // If this is not included, the player would look idle while jumping
+      if (this.player.body.onFloor()) {
+        this.player.play('idle', true);
       }
     }
 
     // Player can jump while walking any direction by pressing the space bar
     // or the 'UP' arrow
     if ((this.cursors.space.isDown || this.cursors.up.isDown) && this.player.body.onFloor()) {
+      if (this.againstSoftEdge("top") &&
+        // This is untested and probably doesn't work
+            (this.cameras.main.scrollY >= 0)) {
+          this.cameras.main.scrollY -= 5;
+      }
       this.player.setVelocityY(-350);
       this.player.play('jump', true);
     }
@@ -283,7 +285,6 @@ class Level1 extends Phaser.Scene {
     Object.entries(inventory).forEach(([key, value]) => {
       inventoryList += key + ": " + value + "\n";
     });
-    console.log('this',this)
     this.inventoryText.setText('Inventory:\n' + inventoryList);
   }
 
