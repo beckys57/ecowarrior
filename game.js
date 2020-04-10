@@ -75,7 +75,7 @@ class Level1 extends Phaser.Scene {
   addPlayer(platforms) {
     let scene = this;
     // Add the player to the game world
-    scene.player = scene.physics.add.sprite(tileSize*12, tileSize*10, 'player');
+    scene.player = scene.physics.add.sprite(tileSize*12.5, tileSize*10, 'player');
     scene.player.body.setSize(scene.player.width - 30, scene.player.height - 26).setOffset(14, 26);
     scene.player.setBounce(0.1); // our player will bounce from items
     scene.player.setCollideWorldBounds(true); // don't go out of the map
