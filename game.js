@@ -1,8 +1,9 @@
+const tileSize = 64;
 const config = {
   type: Phaser.AUTO,
   parent: 'game',
-  width: 800,
-  heigth: 640,
+  width: tileSize * 79,
+  height: tileSize * 16,
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH
@@ -22,7 +23,6 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-const tileSize = 64
 var inventory = {};
 var inventoryText;
 
@@ -39,48 +39,25 @@ function preload() {
   this.load.image('red_mushroom', 'assets/images/red_mushroom.png');
   this.load.image('wasteland_left', 'assets/images/wasteland_left.png');
   // Load the export Tiled JSON
-  this.load.tilemapTiledJSON('map', 'assets/tilemaps/level1.json');
+  this.load.tilemapTiledJSON('map', 'assets/tilemaps/level_1.json');
   // Load player animations from the player spritesheet and atlas JSON
   this.load.atlas('player', 'assets/images/kenney_player.png',
     'assets/images/kenney_player_atlas.json');
 }
 
-function create() {
-  // Create a tile map, which is used to bring our level in Tiled
-  // to our game world in Phaser
-  const map = this.make.tilemap({ key: 'map' });
-  // Add the tileset to the map so the images would load correctly in Phaser
-  const tileset = map.addTilesetImage('tiles_spritesheet', 'tiles');
-  // Place the background image in our game world
-  const backgroundImage = this.add.image(0, 0, 'background').setOrigin(0, 0);
-  // Scale the image to better match our game's resolution
-  backgroundImage.setScale(2, 0.8);
-  // Score info
-  inventoryText = this.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
-
-
-  // Add the platform layer as a static group, the player would be able
-  // to jump on platforms like world collisions but they shouldn't move
-  const platforms = map.createStaticLayer('Platforms', tileset, 0, 200);
-  // There are many ways to set collision between tiles and players
-  // As we want players to collide with all of the platforms, we tell Phaser to
-  // set collisions for every tile in our platform layer whose index isn't -1.
-  // Tiled indices can only be >= 0, therefore we are colliding with all of
-  // the platform layer
-  platforms.setCollisionByExclusion(-1, true);
-
+function addPlayer(scene, platforms) {
   // Add the player to the game world
-  this.player = this.physics.add.sprite(50, 300, 'player');
-  this.player.body.setSize(this.player.width - 30, this.player.height - 26).setOffset(14, 26);
-  this.player.setBounce(0.1); // our player will bounce from items
-  this.player.setCollideWorldBounds(true); // don't go out of the map
-  this.physics.add.collider(this.player, platforms);
+  scene.player = scene.physics.add.sprite(tileSize*2, tileSize*10, 'player');
+  scene.player.body.setSize(scene.player.width - 30, scene.player.height - 26).setOffset(14, 26);
+  scene.player.setBounce(0.1); // our player will bounce from items
+  scene.player.setCollideWorldBounds(true); // don't go out of the map
+  scene.physics.add.collider(scene.player, platforms);
 
   // Create the walking animation using the last 2 frames of
   // the atlas' first row
-  this.anims.create({
+  scene.anims.create({
     key: 'walk',
-    frames: this.anims.generateFrameNames('player', {
+    frames: scene.anims.generateFrameNames('player', {
       prefix: 'robo_player_',
       start: 2,
       end: 3,
@@ -90,69 +67,123 @@ function create() {
   });
 
   // Create an idle animation i.e the first frame
-  this.anims.create({
+  scene.anims.create({
     key: 'idle',
     frames: [{ key: 'player', frame: 'robo_player_0' }],
     frameRate: 10,
   });
 
   // Use the second frame of the atlas for jumping
-  this.anims.create({
+  scene.anims.create({
     key: 'jump',
     frames: [{ key: 'player', frame: 'robo_player_1' }],
     frameRate: 10,
   });
 
+}
+function create() {
+  scene = this;
+  // Create a tile map, which is used to bring our level in Tiled
+  // to our game world in Phaser
+  const map = scene.make.tilemap({ key: 'map' });
+  // Add the tileset to the map so the images would load correctly in Phaser
+  const tileset = map.addTilesetImage('EcoWarrior', 'tiles');
+  // Place the background image in our game world
+  // const backgroundImage = scene.add.image(0, 0, 'background').setOrigin(0, 0);
+  // // Scale the image to better match our game's resolution
+  // backgroundImage.setScale(2, 2);
+  var background = this.add.tileSprite(0, 0, config.width, config.height, "background").setOrigin(0, 0);
+  // Align the camera
+  scene.cameras.main.setViewport(200, 50, tileSize*16, tileSize*10);
+  scene.cameras.main.setScroll(0, tileSize*6);
+  // scene.cameras.main.setSize(config.width, config.height);
+  console.log(scene.cameras.main)
+  let softEdgeX = tileSize * 3;
+  let softEdgeY = tileSize * 2;
+  // Score info
+  inventoryText = scene.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
+  inventoryText.fixedToCamera = true;
+
+
+  // Add the platform layer as a static group, the player would be able
+  // to jump on platforms like world collisions but they shouldn't move
+  const scenery = map.createStaticLayer('Scenery', tileset, 0, 0);
+  const platforms = map.createStaticLayer('Platforms', tileset, 0, 0);
+  // const objects = map.createStaticLayer('Objects', tileset, 0, 0);
+  // There are many ways to set collision between tiles and players
+  // As we want players to collide with all of the platforms, we tell Phaser to
+  // set collisions for every tile in our platform layer whose index isn't -1.
+  // Tiled indices can only be >= 0, therefore we are colliding with all of
+  // the platform layer
+  platforms.setCollisionByExclusion(-1, true);
+
+  // Add the player to the game world
+  addPlayer(scene, platforms);
+
   // Enable user input via cursor keys
-  this.cursors = this.input.keyboard.createCursorKeys();
+  scene.cursors = scene.input.keyboard.createCursorKeys();
 
   // Create the mushrooms
-  this.mushrooms = this.physics.add.group();
+  scene.mushrooms = scene.physics.add.group();
 
   for (i = 0; i < 3; i++) {
     // Add new spikes to our sprite group
-    let mushroom = this.mushrooms.create(
+    let mushroom = scene.mushrooms.create(
         (tileSize * 10) - (i * tileSize * i),
-        (tileSize * 6.75),
+        (tileSize * 13.5),
         'green_mushroom'
       ).setName("green mushroom");
     mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
   };
   for (i = 0; i < 0; i++) {
     // Add new spikes to our sprite group
-    let mushroom = this.mushrooms.create(
+    let mushroom = scene.mushrooms.create(
         (tileSize * 10) - (i * tileSize * i)+tileSize,
-        (tileSize * 6.75),
+        (tileSize * 13.5),
         'red_mushroom'
       ).setName("red mushroom");
     mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
   };
-  this.physics.add.collider(platforms, this.mushrooms);  
-  this.physics.add.overlap(this.player, this.mushrooms, collectItem, null, this);
+  scene.physics.add.collider(platforms, scene.mushrooms);  
+  scene.physics.add.overlap(scene.player, scene.mushrooms, collectItem, null, scene);
 
 
-  this.wasteland = this.add.sprite((tileSize * 9), (tileSize * 10.75), 'wasteland_left');
-  // this.wasteland.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
+  // scene.wasteland = scene.add.sprite((tileSize * 9), (tileSize * 10.75), 'wasteland_left');
+  // scene.wasteland.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
 
-  this.teleporters = this.physics.add.group()
-  teleporter = this.teleporters.create(220, 326, 'red_mushroom').setName("red teleporter");
-  this.physics.add.collider(platforms, this.teleporters);  
-  this.physics.add.overlap(this.player, this.teleporters, collectItem, null, this);
-
+  scene.teleporters = scene.physics.add.group()
+  teleporter = scene.teleporters.create(tileSize*3.5, tileSize*12.5, 'red_mushroom').setName("red teleporter");
+  scene.physics.add.collider(platforms, scene.teleporters);  
+  scene.physics.add.overlap(scene.player, scene.teleporters, collectItem, null, scene);
+  var rect = new Phaser.Geom.Rectangle(scene.cameras.main.x, scene.cameras.main.y, config.width - softEdgeX, config.height - softEdgeY)
+  var graphics = scene.add.graphics();
+  graphics.fillRectShape(rect);
 }
 
 function update() {
-   // this.mushrooms.forEach(function (mushroom) {
-   //      mushroom.update();
-   //  });
+  // // Move camera with arrow keys
+  // if (this.cursors.left.isDown) {
+  //   this.cameras.main.scrollX += 15;
+  // } else if (this.cursors.right.isDown) {
+  //   this.cameras.main.scrollX -= 15;
+  // } else if (this.cursors.up.isDown) {
+  //   this.cameras.main.scrollY -= 15;
+  // } else if (this.cursors.down.isDown) {
+  //   this.cameras.main.scrollY += 15;
+  // }
+
+
   // Control the player with left or right keys
   if (this.cursors.left.isDown) {
     this.player.setVelocityX(-200);
+    console.log('scene.cameras.main.x', scene.cameras.main.x)
+
     if (this.player.body.onFloor()) {
       this.player.play('walk', true);
     }
   } else if (this.cursors.right.isDown) {
     this.player.setVelocityX(200);
+
     if (this.player.body.onFloor()) {
       this.player.play('walk', true);
     }
@@ -167,14 +198,14 @@ function update() {
   }
 
   // if (this.cursors.right.isDown)
-  //   {
-  //       this.cameras.main.scrollX -= 0.5;
+    // {
+    //     this.cameras.main.scrollX -= 0.5;
 
-  //       if (this.cameras.main.scrollX <= 0)
-  //       {
-  //           d = 0;
-  //       }
-  //   }
+    //     if (this.cameras.main.scrollX <= 0)
+    //     {
+    //         d = 0;
+    //     }
+    // }
   //   else
   //   {
   //       this.cameras.main.scrollX += 0.5;
