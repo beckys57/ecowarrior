@@ -32,7 +32,7 @@ function preload() {
   this.load.image('background', 'assets/images/background.png');
   // Load the tileset image file, needed for the map to know what
   // tiles to draw on the screen
-  this.load.image('tiles', 'assets/tilesets/tiles_spritesheet.png');
+  this.load.image('tiles', 'assets/tilesets/tiles_spritesheet_sm.png');
   // Even though we load the tilesheet with the spike image, we need to
   // load the Spike image separately for Phaser 3 to render it
   this.load.image('green_mushroom', 'assets/images/green_mushroom.png');
@@ -79,8 +79,8 @@ function addPlayer(scene, platforms) {
     frames: [{ key: 'player', frame: 'robo_player_1' }],
     frameRate: 10,
   });
-
 }
+
 function create() {
   scene = this;
   // Create a tile map, which is used to bring our level in Tiled
@@ -90,20 +90,16 @@ function create() {
   const tileset = map.addTilesetImage('EcoWarrior', 'tiles');
   // Place the background image in our game world
   // const backgroundImage = scene.add.image(0, 0, 'background').setOrigin(0, 0);
-  // // Scale the image to better match our game's resolution
-  // backgroundImage.setScale(2, 2);
   var background = this.add.tileSprite(0, 0, config.width, config.height, "background").setOrigin(0, 0);
   // Align the camera
   scene.cameras.main.setViewport(200, 50, tileSize*16, tileSize*10);
   scene.cameras.main.setScroll(0, tileSize*6);
   // scene.cameras.main.setSize(config.width, config.height);
-  console.log(scene.cameras.main)
   let softEdgeX = tileSize * 3;
   let softEdgeY = tileSize * 2;
   // Score info
   inventoryText = scene.add.text(16, 16, '', { fontSize: '12px', fill: '#000' });
   inventoryText.fixedToCamera = true;
-
 
   // Add the platform layer as a static group, the player would be able
   // to jump on platforms like world collisions but they shouldn't move
@@ -196,25 +192,6 @@ function update() {
       this.player.play('idle', true);
     }
   }
-
-  // if (this.cursors.right.isDown)
-    // {
-    //     this.cameras.main.scrollX -= 0.5;
-
-    //     if (this.cameras.main.scrollX <= 0)
-    //     {
-    //         d = 0;
-    //     }
-    // }
-  //   else
-  //   {
-  //       this.cameras.main.scrollX += 0.5;
-
-  //       if (this.cameras.main.scrollX >= 800)
-  //       {
-  //           d = 1;
-  //       }
-  //   }
 
   // Player can jump while walking any direction by pressing the space bar
   // or the 'UP' arrow
