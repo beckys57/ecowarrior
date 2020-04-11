@@ -19,7 +19,7 @@ window.addEventListener('load', () => {
     }
   }
 
-  game = new Phaser.Game(config);
+  const game = new Phaser.Game(config);
 });
 
 class Level1 extends Phaser.Scene {
@@ -48,28 +48,94 @@ class Level1 extends Phaser.Scene {
 
 
   init(props) {
-    const { level = 0 } = props
+    const { level = "level1" } = props
     this.currentLevel = level
     this.inventory = {};
   }
 
+  config = {
+    'level1': {
+      'mapPath': 'assets/tilemaps/level_1.json',
+      'background': 'assets/images/background.png',
+      'tiles': 'assets/tilesets/tiles_spritesheet_sm.png',
+      'sprites': {
+                  'green_mushroom': {
+                    'imgPath': 'assets/images/green_mushroom.png',
+                    'bodyOffset': [30, 26, 14, 26],
+                    'instances': [{
+                                    'startX': tileSize*3,
+                                    'startY':  tileSize * 13.5,
+                                  }],
+                  },
+                  'red_mushroom': {
+                    'imgPath': 'assets/images/red_mushroom.png',
+                    'bodyOffset': [30, 26, 14, 26],
+                    'instances': [{
+                                    'startX': tileSize*6,
+                                    'startY':  tileSize * 13.5,
+                                  }],
+                  },
+                  'wasteland_left': {
+                    'imgPath': 'assets/images/wasteland_left.png',
+                    'bodyOffset': [0, 0, tileSize/2, tileSize/2],
+                    'instances': [],
+                  }
+                }
+    },
+    'level2': {
+      'mapPath': 'assets/tilemaps/level_1.json',
+      'background': 'assets/images/background.png',
+      'tiles': 'assets/tilesets/tiles_spritesheet_sm.png',
+      'sprites': {
+                  'grey_mushroom': {
+                    'imgPath': 'assets/images/red_mushroom.png',
+                    'bodyOffset': [30, 26, 14, 26],
+                    'instances': [{
+                                    'startX': tileSize*3,
+                                    'startY':  tileSize * 13.5,
+                                  }],
+                  },
+                  'red_mushroom': {
+                    'imgPath': 'assets/images/red_mushroom.png',
+                    'bodyOffset': [30, 26, 14, 26],
+                    'instances': [{
+                                    'startX': tileSize*6,
+                                    'startY':  tileSize * 13.5,
+                                  }, {
+                                    'startX': tileSize*1,
+                                    'startY':  tileSize * 13.5,
+                                  }],
+                  },
+                  'wasteland_left': {
+                    'imgPath': 'assets/images/wasteland_left.png',
+                    'bodyOffset': [0, 0, tileSize/2, tileSize/2],
+                    'instances': [],
+                  }
+                }
+    },
+  }
+
   preload() {
-    // Image layers from Tiled can't be exported to Phaser 3 (as yet)
-    // So we add the background image separately
-    this.load.image('background', 'assets/images/background.png');
-    // Load the tileset image file, needed for the map to know what
-    // tiles to draw on the screen
-    this.load.image('tiles', 'assets/tilesets/tiles_spritesheet_sm.png');
-    // Even though we load the tilesheet with the spike image, we need to
-    // load the Spike image separately for Phaser 3 to render it
-    this.load.image('green_mushroom', 'assets/images/green_mushroom.png');
-    this.load.image('red_mushroom', 'assets/images/red_mushroom.png');
-    this.load.image('wasteland_left', 'assets/images/wasteland_left.png');
-    // Load the export Tiled JSON
-    this.load.tilemapTiledJSON('map', 'assets/tilemaps/level_1.json');
-    // Load player animations from the player spritesheet and atlas JSON
-    this.load.atlas('player', 'assets/images/kenney_player.png',
-      'assets/images/kenney_player_atlas.json');
+    console.log('Level', this.currentLevel)
+    Object.entries(this.config).forEach(([level, levelConfig]) => {
+      // Load ALL the mapsets, preload doesn't run again on scene change
+      this.load.tilemapTiledJSON('map_'+level, levelConfig['mapPath']);
+      // Image layers from Tiled can't be exported to Phaser 3 (as yet)
+      // So we add the background image separately
+      this.load.image('background', levelConfig['background']);
+      // Load the tileset image file, needed for the map to know what
+      // tiles to draw on the screen
+      this.load.image('tiles', levelConfig['tiles']);
+      // Even though we load the tilesheet with the spike image, we need to
+      // load the sprite images separately for Phaser 3 to render them
+      Object.entries(levelConfig['sprites']).forEach(([name, spriteConfig]) => {
+        this.load.image(name, spriteConfig["imgPath"]);
+      });
+      // Load the export Tiled JSON
+      // Load player animations from the player spritesheet and atlas JSON
+      this.load.atlas('player', 'assets/images/kenney_player.png',
+        'assets/images/kenney_player_atlas.json');
+      });
   }
 
   addPlayer(platforms) {
@@ -111,11 +177,13 @@ class Level1 extends Phaser.Scene {
 
   create() {
     let scene = this;
-    const config = game.config
-
+    const config = this.game.config
+    const levelConfig = this.config[this.currentLevel]
+    // Enable user input via cursor keys
+    scene.cursors = scene.input.keyboard.createCursorKeys();
     // Create a tile map, which is used to bring our level in Tiled
     // to our game world in Phaser
-    const map = scene.make.tilemap({ key: 'map' });
+    const map = scene.make.tilemap({ key: 'map_'+this.currentLevel});
     // Add the tileset to the map so the images would load correctly in Phaser
     const tileset = map.addTilesetImage('EcoWarrior', 'tiles');
     // Place the background image in our game world
@@ -145,44 +213,60 @@ class Level1 extends Phaser.Scene {
     // Add the player to the game world
     this.addPlayer(platforms);
 
-    // Enable user input via cursor keys
-    scene.cursors = scene.input.keyboard.createCursorKeys();
 
-    // Create the mushrooms
-    scene.mushrooms = scene.physics.add.group();
 
-    for (let i = 0; i < 3; i++) {
-      // Add new spikes to our sprite group
-      let mushroom = scene.mushrooms.create(
-          (tileSize * 10) - (i * tileSize * i),
-          (tileSize * 13.5),
-          'green_mushroom'
-        ).setName("green mushroom");
-      mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
-    };
-    for (let i = 0; i < 0; i++) {
-      // Add new spikes to our sprite group
-      let mushroom = scene.mushrooms.create(
-          (tileSize * 10) - (i * tileSize * i)+tileSize,
-          (tileSize * 13.5),
-          'red_mushroom'
-        ).setName("red mushroom");
-      mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
-    };
-    scene.physics.add.collider(platforms, scene.mushrooms);  
-    scene.physics.add.overlap(scene.player, scene.mushrooms, this.collectItem, null, scene);
+    scene.sprites = scene.physics.add.group();
+    Object.entries(levelConfig['sprites']).forEach(([name, spriteConfig]) => {
+      console.log('Adding sprite', name, this.config[this.currentLevel])
+      spriteConfig.instances.forEach((spriteData) => {
+        console.log(name, spriteData);
+        let sprite = scene.sprites.create(
+          spriteData["startX"], spriteData["startY"], name
+        ).setName(name);
+        sprite.body.setSize(sprite.width - spriteConfig["bodyOffset"][0], sprite.height - spriteConfig["bodyOffset"][1]).setOffset(spriteConfig["bodyOffset"][2], spriteConfig["bodyOffset"][3]);
+        console.log(sprite.width - spriteConfig["bodyOffset"][0], sprite.height - spriteConfig["bodyOffset"][1],spriteConfig["bodyOffset"][2], spriteConfig["bodyOffset"][3]);
+
+      })
+    });
+    scene.physics.add.collider(platforms, scene.sprites);  
+    scene.physics.add.overlap(scene.player, scene.sprites, this.collectItem, null, scene);
+
+    // // Create the mushrooms
+    // scene.mushrooms = scene.physics.add.group();
+
+
+    // for (let i = 0; i < 3; i++) {
+    //   // Add new spikes to our sprite group
+    //   let mushroom = scene.mushrooms.create(
+    //       (tileSize * 10) - (i * tileSize * i),
+    //       (tileSize * 13.5),
+    //       'green_mushroom'
+    //     ).setName("green mushroom");
+    //   mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
+    // };
+    // for (let i = 0; i < 0; i++) {
+    //   // Add new spikes to our sprite group
+    //   let mushroom = scene.mushrooms.create(
+    //       (tileSize * 10) - (i * tileSize * i)+tileSize,
+    //       (tileSize * 13.5),
+    //       'red_mushroom'
+    //     ).setName("red mushroom");
+    //   mushroom.body.setSize(mushroom.width - 30, mushroom.height - 26).setOffset(14, 26);
+    // };
+    // scene.physics.add.collider(platforms, scene.mushrooms);  
+    // scene.physics.add.overlap(scene.player, scene.mushrooms, this.collectItem, null, scene);
 
 
     // scene.wasteland = scene.add.sprite((tileSize * 9), (tileSize * 10.75), 'wasteland_left');
     // scene.wasteland.body.setSize(land.width - 30, land.height - 26).setOffset(14, 26);
 
-    scene.teleporters = scene.physics.add.group()
-    const teleporter = scene.teleporters.create(tileSize*3.5, tileSize*12.5, 'red_mushroom').setName("red teleporter");
-    scene.physics.add.collider(platforms, scene.teleporters);  
-    scene.physics.add.overlap(scene.player, scene.teleporters, this.collectItem, null, scene);
-    var rect = new Phaser.Geom.Rectangle(scene.cameras.main.x, scene.cameras.main.y, config.width - softEdgeX, config.height - softEdgeY)
-    var graphics = scene.add.graphics();
-    graphics.fillRectShape(rect);
+    // scene.teleporters = scene.physics.add.group()
+    // const teleporter = scene.teleporters.create(tileSize*3.5, tileSize*12.5, 'red_mushroom').setName("red teleporter");
+    // scene.physics.add.collider(platforms, scene.teleporters);  
+    // scene.physics.add.overlap(scene.player, scene.teleporters, this.collectItem, null, scene);
+    // var rect = new Phaser.Geom.Rectangle(scene.cameras.main.x, scene.cameras.main.y, config.width - softEdgeX, config.height - softEdgeY)
+    // var graphics = scene.add.graphics();
+    // graphics.fillRectShape(rect);
   }
 
   againstSoftEdge(side) {
@@ -202,18 +286,16 @@ class Level1 extends Phaser.Scene {
     }
   }
 
-  update() {
-    // // Move camera with arrow keys
-    // if (this.cursors.left.isDown) {
-    //   this.cameras.main.scrollX += 15;
-    // } else if (this.cursors.right.isDown) {
-    //   this.cameras.main.scrollX -= 15;
-    // } else if (this.cursors.up.isDown) {
-    //   this.cameras.main.scrollY -= 15;
-    // } else if (this.cursors.down.isDown) {
-    //   this.cameras.main.scrollY += 15;
-    // }
+  changeLevel(destination) {
+    // item.disableBody(true, true);
+    console.log(this.mushrooms)
+    this.sprites.getChildren().map(child => child.destroy())
+    // this.teleporters.getChildren().map(child => child.destroy())
+      this.scene.restart({ level: "level2" })
+  }
 
+  update() {
+    // levelConfig = this.config[this.currentLevel]
     // MOVE //
     // Control the player with left or right keys
     if (this.cursors.left.isDown) {
@@ -221,6 +303,7 @@ class Level1 extends Phaser.Scene {
       if (this.player.body.onFloor()) {
         this.player.play('walk', true);
       }
+      this.changeLevel("level2")
 
       if (this.againstSoftEdge("left") && this.cameras.main.scrollX >= 0) {
           this.cameras.main.scrollX -= 5;
@@ -232,7 +315,7 @@ class Level1 extends Phaser.Scene {
       }
 
       if (this.againstSoftEdge("right") &&
-            (this.cameras.main.scrollX + this.cameras.main.width <= game.config.width)) {
+            (this.cameras.main.scrollX + this.cameras.main.width <= this.game.config.width)) {
           this.cameras.main.scrollX += 5;
       }
     } else {
